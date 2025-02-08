@@ -19,7 +19,7 @@ from cube import FACE_ORDER, Cube
 class Cubie:
     def __init__(self, parent, r_pos: list[int]):
         self.parent: RubiksCube = parent
-        self.r_pos = r_pos  # Relative pos
+        self.r_pos = r_pos  # Relative position
         # Define the 8 points of the cube
         self.points = [
             np.matrix([-1, -1, 1]),
@@ -36,6 +36,9 @@ class Cubie:
         self.projected_points = [[n, n] for n in range(len(self.points))]
 
     def get_points(self, face):
+        """
+        Get the points of the specified face.
+        """
         p = self.projected_points
         match face:
             case "B":
@@ -52,6 +55,9 @@ class Cubie:
                 return [p[0], p[3], p[7], p[4]]
 
     def is_face_visible(self, face, reversed=1):
+        """
+        Check if the specified face is visible.
+        """
         match face:
             case "B":
                 if self.r_pos[2] <= 0:
@@ -86,6 +92,9 @@ class Cubie:
         return normal[2] < 0
 
     def draw_face(self, face):
+        """
+        Draw the specified face.
+        """
         if not self.is_face_visible(face):
             return
         match face:
@@ -164,6 +173,9 @@ class Cubie:
             )
 
     def project_point(self, point, r_pos, angle, mult):
+        """
+        Project a 3D point to 2D.
+        """
         rz, ry, rx = angle
         offset_point = point + r_pos
         # Apply the rotation matrices to the points
@@ -180,6 +192,9 @@ class Cubie:
         return np.array([x, y])
 
     def render(self, angle, mult):
+        """
+        Render the cubie.
+        """
         # Update projected points
         for i, point in enumerate(self.points):
             self.projected_points[i] = self.project_point(
@@ -229,7 +244,7 @@ class RubiksCube(Widget, Cube):
 
     frame_rate = NumericProperty(1 / 60)
     """
-    Frame rate of updating cube
+    Frame rate of updating cube.
     """
 
     faces_colors = {
@@ -245,6 +260,9 @@ class RubiksCube(Widget, Cube):
     """
 
     _last_touch_pos = None
+    """
+    Last touch position for tracking touch movement.
+    """
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -258,10 +276,14 @@ class RubiksCube(Widget, Cube):
         Clock.schedule_interval(self.update_cube, self.frame_rate)
 
     def _is_point_in_triangle(self, px, py, ax, ay, bx, by, cx, cy):
-        # Calcul des barycentres pour vérifier si le point est dans le triangle
+        """
+        Check if a point (px, py) is inside a triangle defined by points (ax, ay), (bx, by), and (cx, cy).
+        Uses barycentric coordinates to determine if the point is inside the triangle.
+        """
+        # Calculate barycentric coordinates to check if the point is inside the triangle
         denominator = (by - cy) * (ax - cx) + (cx - bx) * (ay - cy)
         if denominator == 0:
-            return False  # Triangle dégénéré
+            return False  # Degenerate triangle
 
         a = ((by - cy) * (px - cx) + (cx - bx) * (py - cy)) / denominator
         b = ((cy - ay) * (px - cx) + (ax - cx) * (py - cy)) / denominator
@@ -270,23 +292,29 @@ class RubiksCube(Widget, Cube):
         return 0 <= a <= 1 and 0 <= b <= 1 and 0 <= c <= 1
 
     def _is_touch_inside_face(self, touch_pos, face_points):
-        """Vérifie si le toucher est à l'intérieur d'une face définie par 4 points."""
+        """
+        Check if a touch position is inside a face defined by 4 points.
+        Decomposes the face into two triangles and checks if the touch position is inside either triangle.
+        """
         x, y = touch_pos
 
-        # Décompose la face en deux triangles
+        # Decompose the face into two triangles
         (ax, ay), (bx, by), (cx, cy), (dx, dy) = face_points
 
-        # Vérifie si le point est dans l'un des deux triangles
+        # Check if the point is inside either triangle
         return self._is_point_in_triangle(
             x, y, ax, ay, bx, by, cx, cy
         ) or self._is_point_in_triangle(x, y, ax, ay, cx, cy, dx, dy)
 
     def on_touch_down(self, touch: MotionEvent):
+        """
+        Handle touch down events.
+        """
         if self.collide_point(*touch.pos):
             touch.grab(self)
             self._last_touch_pos = touch.pos
             self._last_face_touch = None
-            # Detect if a face is touch
+            # Detect if a face is touched
             for cubie in self._cubies:
                 if cubie.r_pos.count(0) != 2:
                     continue
@@ -305,6 +333,9 @@ class RubiksCube(Widget, Cube):
         return super().on_touch_down(touch)
 
     def on_touch_move(self, touch):
+        """
+        Handle touch move events.
+        """
         if touch.grab_current is self and self.allow_rotation:
             dx = touch.pos[0] - self._last_touch_pos[0]
             dy = touch.pos[1] - self._last_touch_pos[1]
@@ -328,6 +359,9 @@ class RubiksCube(Widget, Cube):
         return super().on_touch_move(touch)
 
     def on_touch_up(self, touch):
+        """
+        Handle touch up events.
+        """
         if touch.grab_current is self:
             touch.ungrab(self)
             if (
@@ -341,6 +375,9 @@ class RubiksCube(Widget, Cube):
         return super().on_touch_up(touch)
 
     def update_cube(self, *args):
+        """
+        Update the cube's rotation and render it.
+        """
         # Define the rotation matrices
         rotation_z = np.matrix(
             [
